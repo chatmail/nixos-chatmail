@@ -1,6 +1,19 @@
 { config, lib, pkgs, ... }:
 let
   cfg = config.services.chatmail;
+  dovecotAuthConf = pkgs.writeText "auth.conf" ''
+    uri = proxy:/run/doveauth.socket:auth
+    iterate_disable = yes
+    default_pass_scheme = plain
+    # %E escapes characters " (double quote), ' (single quote) and \ (backslash) with \ (backslash).
+    # See <https://doc.dovecot.org/configuration_manual/config_file/config_variables/#modifiers>
+    # for documentation.
+    #
+    # We escape user-provided input and use double quote as a separator.
+    password_key = passdb/%Ew"%Eu
+    user_key = userdb/%Eu
+  '';
+
   chatmailConf = ''
     [params]
 
@@ -73,14 +86,91 @@ in {
 
   config = lib.mkIf cfg.enable {
     environment.etc."chatmail/chatmail.ini".source = cfg.configFile;
+    environment.etc."chatmail/dovecot/auth.conf".source = dovecotAuthConf;
 
     services.dovecot2 = {
       enable = true;
-      enableImap = true;
       enablePop3 = false;
+      enableImap = true;
+      enableLmtp = true;
 
       mailUser = "vmail";
       mailGroup = "vmail";
+
+      extraConfig = ''
+        auth_verbose = yes
+        auth_debug = yes
+        auth_debug_passwords = yes
+        auth_verbose_passwords = plain
+        mail_debug = yes
+
+        # these are the capabilities Delta Chat cares about actually
+        # so let's keep the network overhead per login small
+        # https://github.com/deltachat/deltachat-core-rust/blob/master/src/imap/capabilities.rs
+        imap_capability = IMAP4rev1 IDLE MOVE QUOTA CONDSTORE NOTIFY METADATA
+
+
+        # Authentication for system users.
+        passdb {
+          driver = dict
+          args = ${dovecotAuthConf}
+        }
+        userdb {
+          driver = dict
+          args = ${dovecotAuthConf}
+        }
+
+        ##
+        ## Mailbox locations and namespaces
+        ##
+
+        # Mailboxes are stored in the "mail" directory of the vmail user home.
+        mail_location = maildir:/home/vmail/mail/%d/%u
+
+        namespace inbox {
+          inbox = yes
+
+          mailbox Drafts {
+            special_use = \Drafts
+          }
+          mailbox Junk {
+            special_use = \Junk
+          }
+          mailbox Trash {
+            special_use = \Trash
+          }
+
+          # For \Sent mailboxes there are two widely used names. We'll mark both of
+          # them as \Sent. User typically deletes one of them if duplicates are created.
+          mailbox Sent {
+            special_use = \Sent
+          }
+          mailbox "Sent Messages" {
+            special_use = \Sent
+          }
+        }
+
+        service auth {
+          unix_listener auth {
+            mode = 0660
+            user = ${config.services.postfix.user}
+            group = ${config.services.postfix.group}
+          }
+        }
+
+        service auth-worker {
+          # Default is root.
+          # Drop privileges we don't need.
+          #user = ${config.services.dovecot2.mailUser}
+        }
+      '';
+
+      sslServerCert = config.security.acme.certs."c-nixos.testrun.org".directory
+        + "/full.pem";
+      sslServerKey = config.security.acme.certs."c-nixos.testrun.org".directory
+        + "/key.pem";
+
+      enablePAM = false;
     };
 
     services.postfix = {
@@ -118,7 +208,7 @@ in {
         after = [ "network.target" ];
         serviceConfig = {
           ExecStart =
-            "${pkgs.chatmaild}/bin/doveauth /run/dovecot2/doveauth.socket vmail /var/lib/chatmail/passdb.sqlite ${cfg.configFile}";
+            "${pkgs.chatmaild}/bin/doveauth /run/doveauth.socket vmail /var/lib/chatmail/passdb.sqlite ${cfg.configFile}";
           Restart = "always";
           RestartSec = 30;
           StateDirectory = "chatmail";
