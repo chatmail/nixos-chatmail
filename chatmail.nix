@@ -1,5 +1,6 @@
 { config, lib, pkgs, ... }:
 let
+  chatmailDomain = "c-nixos.testrun.org";
   cfg = config.services.chatmail;
   dovecotAuthConf = pkgs.writeText "auth.conf" ''
     uri = proxy:/run/doveauth.socket:auth
@@ -18,7 +19,7 @@ let
     [params]
 
     # mail domain (MUST be set to fully qualified chat mail domain)
-    mail_domain = c-nixos.testrun.org
+    mail_domain = ${chatmailDomain}
 
     #
     # Account Restrictions
@@ -104,6 +105,10 @@ in {
         auth_verbose_passwords = plain
         mail_debug = yes
 
+        auth_cache_size = 100M
+
+        mail_server_admin = mailto:root@${chatmailDomain}
+
         # these are the capabilities Delta Chat cares about actually
         # so let's keep the network overhead per login small
         # https://github.com/deltachat/deltachat-core-rust/blob/master/src/imap/capabilities.rs
@@ -150,6 +155,16 @@ in {
           }
         }
 
+        service lmtp {
+          user = ${config.services.dovecot2.mailUser}
+
+          unix_listener dovecot-lmtp {
+            group = ${config.services.postfix.group}
+            mode = 0600
+            user = ${config.services.postfix.user}
+          }
+        }
+
         service auth {
           unix_listener auth {
             mode = 0660
@@ -163,11 +178,33 @@ in {
           # Drop privileges we don't need.
           user = ${config.services.dovecot2.mailUser}
         }
+
+        service imap-login {
+          # High-security mode.
+          # Each process serves a single connection and exits afterwards.
+          # This is the default, but we set it explicitly to be sure.
+          # See <https://doc.dovecot.org/admin_manual/login_processes/#high-security-mode> for details.
+          service_count = 1
+
+          # Inrease the number of simultaneous connections.
+          #
+          # As of Dovecot 2.3.19.1 the default is 100 processes.
+          # Combined with `service_count = 1` it means only 100 connections
+          # can be handled simultaneously.
+          process_limit = 10000
+
+          # Avoid startup latency for new connections.
+          process_min_avail = 10
+        }
+
+        ssl = required
+        ssl_min_protocol = TLSv1.2
+        ssl_prefer_server_ciphers = yes
       '';
 
-      sslServerCert = config.security.acme.certs."c-nixos.testrun.org".directory
+      sslServerCert = config.security.acme.certs."${chatmailDomain}".directory
         + "/full.pem";
-      sslServerKey = config.security.acme.certs."c-nixos.testrun.org".directory
+      sslServerKey = config.security.acme.certs."${chatmailDomain}".directory
         + "/key.pem";
 
       enablePAM = false;
@@ -176,9 +213,9 @@ in {
     services.postfix = {
       enable = true;
 
-      sslCert = config.security.acme.certs."c-nixos.testrun.org".directory
+      sslCert = config.security.acme.certs."${chatmailDomain}".directory
         + "/full.pem";
-      sslKey = config.security.acme.certs."c-nixos.testrun.org".directory
+      sslKey = config.security.acme.certs."${chatmailDomain}".directory
         + "/key.pem";
 
       enableSubmission = true;
