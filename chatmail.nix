@@ -161,7 +161,7 @@ in {
         service auth-worker {
           # Default is root.
           # Drop privileges we don't need.
-          #user = ${config.services.dovecot2.mailUser}
+          user = ${config.services.dovecot2.mailUser}
         }
       '';
 
