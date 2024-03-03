@@ -85,6 +85,20 @@ in {
           RestartSec = 30;
         };
       };
+
+      doveauth = {
+        description = "Chatmail dict authentication proxy for Dovecot";
+        wantedBy = [ "multi-user.target" ];
+        after = [ "network.target" ];
+        serviceConfig = {
+          ExecStart =
+            "${pkgs.chatmaild}/bin/doveauth /run/dovecot2/doveauth.socket vmail /var/lib/chatmail/passdb.sqlite ${cfg.configFile}";
+          Restart = "always";
+          RestartSec = 30;
+          StateDirectory = "chatmail";
+          StateDirectoryMode = "0750";
+        };
+      };
     };
   };
 }
