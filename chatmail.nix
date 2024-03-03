@@ -74,6 +74,32 @@ in {
   config = lib.mkIf cfg.enable {
     environment.etc."chatmail/chatmail.ini".source = cfg.configFile;
 
+    services.dovecot2 = {
+      enable = true;
+      enableImap = true;
+      enablePop3 = false;
+
+      mailUser = "vmail";
+      mailGroup = "vmail";
+    };
+
+    services.postfix = {
+      enable = true;
+
+      sslCert = config.security.acme.certs."c-nixos.testrun.org".directory
+        + "/full.pem";
+      sslKey = config.security.acme.certs."c-nixos.testrun.org".directory
+        + "/key.pem";
+
+      enableSubmission = true;
+      enableSubmissions = true;
+
+      config = {
+        # maixmum 30MB sized messages
+        message_size_limit = "31457280";
+      };
+    };
+
     systemd.services = {
       filtermail = {
         description = "Chatmail Postfix BeforeQueue filter";

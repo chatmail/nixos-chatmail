@@ -43,11 +43,7 @@
       })
   ];
 
-  environment.systemPackages = with pkgs; [
-    vim
-    htop
-    chatmaild
-  ];
+  environment.systemPackages = with pkgs; [ vim htop chatmaild ];
 
   security.acme.acceptTerms = true;
   security.acme.defaults.email = "root@c-nixos.testrun.org";
@@ -75,31 +71,5 @@
   services.chatmail = {
     enable = true;
     passwordMinLength = 10;
-  };
-
-  services.postfix = {
-    enable = true;
-
-    sslCert = config.security.acme.certs."c-nixos.testrun.org".directory
-      + "/full.pem";
-    sslKey = config.security.acme.certs."c-nixos.testrun.org".directory
-      + "/key.pem";
-
-    enableSubmission = true;
-    enableSubmissions = true;
-
-    config = {
-      # maixmum 30MB sized messages
-      message_size_limit = "31457280";
-    };
-  };
-
-  services.dovecot2 = {
-    enable = true;
-    enableImap = true;
-    enablePop3 = false;
-
-    mailUser = "vmail";
-    mailGroup = "vmail";
   };
 }
