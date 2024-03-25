@@ -1,7 +1,9 @@
-{ buildPythonPackage
-, fetchFromGitHub
-, python3Packages
-}:
+{ pkgs, ... }:
+let
+  python3Packages = pkgs.python3Packages;
+  buildPythonPackage = python3Packages.buildPythonPackage;
+  fetchFromGitHub = pkgs.fetchFromGitHub;
+in
 buildPythonPackage rec {
   name = "chatmaild";
   version = "0-unstable-2024-03-03";
