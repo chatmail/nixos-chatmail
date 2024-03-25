@@ -1,5 +1,11 @@
 { config, lib, pkgs, ... }:
 let
+  inherit (lib)
+    mdDoc
+    mkEnableOption
+    mkIf
+    mkOption;
+
   chatmailDomain = "c-nixos.testrun.org";
   cfg = config.services.chatmail;
   dovecotAuthConf = pkgs.writeText "auth.conf" ''
@@ -50,43 +56,43 @@ let
 in
 {
   options.services.chatmail = {
-    enable = lib.mkEnableOption "chatmail";
-    configFile = lib.mkOption {
+    enable = mkEnableOption "chatmail";
+    configFile = mkOption {
       type = lib.types.nullOr lib.types.path;
       default = null;
-      description = lib.mdDoc "chatmail.ini configuration file";
+      description = mdDoc "chatmail.ini configuration file";
       apply = v:
         if v != null then v else pkgs.writeText "chatmail.ini" chatmailConf;
     };
-    usernameMinLength = lib.mkOption {
+    usernameMinLength = mkOption {
       type = lib.types.int;
       default = 9;
-      description = lib.mdDoc "Minimum length a username must have";
+      description = mdDoc "Minimum length a username must have";
     };
-    usernameMaxLength = lib.mkOption {
+    usernameMaxLength = mkOption {
       type = lib.types.int;
       default = 9;
-      description = lib.mdDoc "Maximum length a username can have";
+      description = mdDoc "Maximum length a username can have";
     };
-    passwordMinLength = lib.mkOption {
+    passwordMinLength = mkOption {
       type = lib.types.int;
       default = 9;
-      description = lib.mdDoc "Minimum length a password must have";
+      description = mdDoc "Minimum length a password must have";
     };
-    filtermailSmtpPort = lib.mkOption {
+    filtermailSmtpPort = mkOption {
       type = lib.types.port;
       default = 10080;
-      description = lib.mdDoc "Where the filtermail SMTP service listens";
+      description = mdDoc "Where the filtermail SMTP service listens";
     };
-    postfixReinjectPort = lib.mkOption {
+    postfixReinjectPort = mkOption {
       type = lib.types.port;
       default = 10025;
       description =
-        lib.mdDoc "Postfix accepts on the localhost reinject SMTP port";
+        mdDoc "Postfix accepts on the localhost reinject SMTP port";
     };
   };
 
-  config = lib.mkIf cfg.enable {
+  config = mkIf cfg.enable {
     environment.etc."chatmail/chatmail.ini".source = cfg.configFile;
     environment.etc."chatmail/dovecot/auth.conf".source = dovecotAuthConf;
 
