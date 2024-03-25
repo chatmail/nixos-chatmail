@@ -19,27 +19,13 @@
 
   nixpkgs.overlays = [
     (final: prev:
-
       {
-        chatmaild = prev.python3Packages.buildPythonPackage rec {
-          name = "chatmaild";
-          version = "0-unstable-2024-03-03";
-          src = prev.fetchFromGitHub {
-            owner = "deltachat";
-            repo = "chatmail";
-            rev = "14342383cf6294241e49576b404a4606c11c8e34";
-            sha256 = "sha256-ceC7J+qEyxsdUKrfb+/D6wz6g+Yw7tYH+KrLJdOZEVw=";
+        chatmaild = prev.callPackage ./pkgs/chatmaild
+          {
+            buildPythonPackage = prev.python3Packages.buildPythonPackage;
+            fetchFromGitHub = prev.fetchFromGitHub;
+            python3Packages = prev.python3Packages;
           };
-          sourceRoot = "${src.name}/chatmaild";
-          format = "pyproject";
-          propagatedBuildInputs = [
-            prev.python3Packages.setuptools
-            prev.python3Packages.aiosmtpd
-            prev.python3Packages.iniconfig
-            prev.python3Packages.requests
-            # Also deltachat-rpc-client and deltachat-rpc-server for echobot
-          ];
-        };
       })
   ];
 
