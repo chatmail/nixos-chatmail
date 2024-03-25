@@ -17,17 +17,7 @@
   ];
   system.stateVersion = "23.11";
 
-  nixpkgs.overlays = [
-    (final: prev:
-      {
-        chatmaild = prev.callPackage ./pkgs/chatmaild
-          {
-            buildPythonPackage = prev.python3Packages.buildPythonPackage;
-            fetchFromGitHub = prev.fetchFromGitHub;
-            python3Packages = prev.python3Packages;
-          };
-      })
-  ];
+  nixpkgs.overlays = [ (import ./overlay.nix) ];
 
   environment.systemPackages = with pkgs; [ vim htop chatmaild ];
 
