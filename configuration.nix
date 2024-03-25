@@ -8,7 +8,7 @@
   boot.tmp.cleanOnBoot = true;
   zramSwap.enable = true;
   networking.hostName = "c-nixos";
-  networking.domain = "";
+  networking.domain = "testrun.org";
   services.openssh.enable = true;
   services.openssh.settings.PasswordAuthentication = false;
   services.sshguard.enable = true;

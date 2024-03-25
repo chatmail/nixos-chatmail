@@ -6,7 +6,7 @@ let
     mkIf
     mkOption;
 
-  chatmailDomain = "c-nixos.testrun.org";
+  chatmailDomain = config.networking.fqdn;
   cfg = config.services.chatmail;
   dovecotAuthConf = pkgs.writeText "auth.conf" ''
     uri = proxy:/run/doveauth.socket:auth
