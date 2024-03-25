@@ -432,15 +432,32 @@ in
       '';
     };
 
-    services.opendkim = {
-      enable = true;
-      selector = "dkim";
+    services.opendkim =
+      let
+        screenPolicyScript = pkgs.writeTextFile {
+          name = "screen.lua";
+          text = builtins.readFile ./screen.lua;
+        };
+        finalPolicyScript = pkgs.writeTextFile {
+          name = "final.lua";
+          text = builtins.readFile ./final.lua;
+        };
+      in
+      {
+        enable = true;
+        selector = "dkim";
 
-      configFile = pkgs.writeText "opendkim.conf" ''
-        # Set umask so postfix user can access unix socket from opendkim group.
-        UMask 0002
-      '';
-    };
+        configFile = pkgs.writeText "opendkim.conf" ''
+          # Script to ignore signatures that do not correspond to the From: domain.
+          ScreenPolicyScript ${screenPolicyScript}
+
+          # Script to reject mails without a valid DKIM signature.
+          FinalPolicyScript ${finalPolicyScript}
+
+          # Set umask so postfix user can access unix socket from opendkim group.
+          UMask 0007
+        '';
+      };
 
     systemd.services = {
       filtermail = {
