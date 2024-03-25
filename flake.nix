@@ -18,5 +18,8 @@
         ./configuration.nix
       ];
     };
+
+    nixosModules.default = import ./modules/default.nix;
+    overlays.default = import ./overlay.nix;
   };
 }
