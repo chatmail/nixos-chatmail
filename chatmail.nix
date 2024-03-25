@@ -47,7 +47,8 @@ let
     filtermail_smtp_port = ${toString cfg.filtermailSmtpPort}
     postfix_reinject_port = ${toString cfg.postfixReinjectPort}
   '';
-in {
+in
+{
   options.services.chatmail = {
     enable = lib.mkEnableOption "chatmail";
     configFile = lib.mkOption {
