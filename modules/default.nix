@@ -418,7 +418,7 @@ in
         # Local SMTP server for reinjecting filered mail.
         localhost:${toString cfg.postfixReinjectPort} inet  n       -       n       -       10      smtpd
           -o syslog_name=postfix/reinject
-          #-o smtpd_milters=unix:opendkim/opendkim.sock # TODO configure opendkim milter
+          -o smtpd_milters=unix:/run/opendkim/opendkim.sock
           -o cleanup_service_name=authclean
 
         # Cleanup `Received` headers for authenticated mail
@@ -429,6 +429,16 @@ in
         # if `Received` header is signed.
         authclean unix  n       -       -       -       0       cleanup
           -o header_checks=regexp:${submissionHeaderCleanup}
+      '';
+    };
+
+    services.opendkim = {
+      enable = true;
+      selector = "dkim";
+
+      configFile = pkgs.writeText "opendkim.conf" ''
+        # Set umask so postfix user can access unix socket from opendkim group.
+        UMask 0002
       '';
     };
 
@@ -478,6 +488,9 @@ in
         createHome = true;
         group = "vmail";
       };
+
+      # Add postfix to opendkim group so it can access milter socket.
+      postfix.extraGroups = [ config.services.opendkim.group ];
     };
 
   };
