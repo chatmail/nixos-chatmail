@@ -129,6 +129,7 @@ in
     environment.etc."chatmail/chatmail.ini".source = cfg.configFile;
     environment.etc."chatmail/dovecot/auth.conf".source = dovecotAuthConf;
     environment.etc."mta-sts-daemon.yml".source = mtaStsDaemonConf;
+    environment.etc."opendkim.conf".source = config.services.opendkim.configFile;
 
     services.dovecot2 = {
       enable = true;
@@ -434,6 +435,7 @@ in
 
     services.opendkim =
       let
+        selector = "dkim";
         screenPolicyScript = pkgs.writeTextFile {
           name = "screen.lua";
           text = builtins.readFile ./screen.lua;
@@ -442,12 +444,38 @@ in
           name = "final.lua";
           text = builtins.readFile ./final.lua;
         };
+        keyPath = "/var/lib/opendkim/keys";
+        keyFile = "${keyPath}/${selector}.private";
+        signingTable = pkgs.writeText "SigningTable" ''
+          *@${ config.networking.fqdn } ${selector}._domainkey.${ config.networking.fqdn }
+        '';
+        keyTable = pkgs.writeText "KeyTable" ''
+          ${ selector }._domainkey.${config.networking.fqdn} ${config.networking.fqdn}:${selector}:${keyFile}
+        '';
       in
       {
         enable = true;
-        selector = "dkim";
-
+        inherit selector keyPath;
         configFile = pkgs.writeText "opendkim.conf" ''
+          Syslog         yes
+          SyslogSuccess  yes
+
+          Canonicalization relaxed/simple
+          OversignHeaders  From
+
+          On-BadSignature  reject
+          On-KeyNotFound   reject
+          On-NoSignature   reject
+
+          Domain          ${ config.networking.fqdn }
+          Selector        ${ selector }
+          KeyFile         ${ keyFile }
+          KeyTable        ${ keyTable }
+          SigningTable refile:${ signingTable }
+
+          # Sign Autocrypt header in addition to the default specified in RFC 6376
+          SignHeaders *,+autocrypt
+
           # Script to ignore signatures that do not correspond to the From: domain.
           ScreenPolicyScript ${screenPolicyScript}
 
@@ -456,6 +484,8 @@ in
 
           # Set umask so postfix user can access unix socket from opendkim group.
           UMask 0007
+
+          Socket ${ config.services.opendkim.socket }
         '';
       };
 
@@ -493,6 +523,16 @@ in
           ExecStart = "${pkgs.postfix-mta-sts-resolver}/bin/mta-sts-daemon";
           Restart = "always";
           RestartSec = 30;
+        };
+      };
+
+      opendkim = {
+        serviceConfig = {
+          # Remove all command line flags except for:
+          # -f for running in foregorund instead of daemonizing
+          # -l for logging
+          # -x for configuration file
+          ExecStart = lib.mkForce "${pkgs.opendkim}/bin/opendkim -f -l -x ${config.services.opendkim.configFile}";
         };
       };
     };
