@@ -21,6 +21,22 @@ let
     user_key = userdb/%Eu
   '';
 
+  mtaStsDaemonConf = pkgs.writeText "mta-sts-daemon.yml" ''
+    host: 127.0.0.1
+    port: 8461
+    reuse_port: true
+    shutdown_timeout: 20
+    cache:
+      type: internal
+      options:
+        cache_size: 10000
+    proactive_policy_fetching:
+      enabled: true
+    default_zone:
+      strict_testing: false
+      timeout: 4
+  '';
+
   chatmailConf = ''
     [params]
 
@@ -95,6 +111,7 @@ in
   config = mkIf cfg.enable {
     environment.etc."chatmail/chatmail.ini".source = cfg.configFile;
     environment.etc."chatmail/dovecot/auth.conf".source = dovecotAuthConf;
+    environment.etc."mta-sts-daemon.yml".source = mtaStsDaemonConf;
 
     services.dovecot2 = {
       enable = true;
@@ -257,6 +274,17 @@ in
           RestartSec = 30;
           StateDirectory = "chatmail";
           StateDirectoryMode = "0750";
+        };
+      };
+
+      mta-sts-daemon = {
+        description = "Postfix MTA-STS resolver daemon";
+        wantedBy = [ "multi-user.target" ];
+        after = [ "network.target" ];
+        serviceConfig = {
+          ExecStart = "${pkgs.postfix-mta-sts-resolver}/bin/mta-sts-daemon";
+          Restart = "always";
+          RestartSec = 30;
         };
       };
     };
