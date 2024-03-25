@@ -21,9 +21,16 @@ let
     user_key = userdb/%Eu
   '';
 
+  submissionHeaderCleanup = pkgs.writeText "submission_header_cleanup" ''
+    /^Received:/            IGNORE
+    /^X-Originating-IP:/    IGNORE
+    /^X-Mailer:/            IGNORE
+    /^User-Agent:/          IGNORE
+  '';
+
   mtaStsDaemonConf = pkgs.writeText "mta-sts-daemon.yml" ''
     host: 127.0.0.1
-    port: 8461
+    port: ${toString cfg.mtaStsPort}
     reuse_port: true
     shutdown_timeout: 20
     cache:
@@ -35,6 +42,10 @@ let
     default_zone:
       strict_testing: false
       timeout: 4
+  '';
+
+  postfixLoginMap = pkgs.writeText "login_map" ''
+    /^(.*)$/        ''${1}
   '';
 
   chatmailConf = ''
@@ -105,6 +116,12 @@ in
       default = 10025;
       description =
         mdDoc "Postfix accepts on the localhost reinject SMTP port";
+    };
+    mtaStsPort = mkOption {
+      type = lib.types.port;
+      default = 8461;
+      description =
+        mdDoc "MTA-STS daemon port";
     };
   };
 
@@ -190,7 +207,7 @@ in
         }
 
         service auth {
-          unix_listener auth {
+          unix_listener /var/lib/postfix/queue/private/auth {
             mode = 0660
             user = ${config.services.postfix.user}
             group = ${config.services.postfix.group}
@@ -249,6 +266,170 @@ in
         # maixmum 30MB sized messages
         message_size_limit = "31457280";
       };
+
+      extraConfig = ''
+        myorigin = ${chatmailDomain}
+
+        smtpd_banner = $myhostname ESMTP $mail_name (Chatmail)
+        biff = no
+
+        # appending .domain is the MUA's job.
+        append_dot_mydomain = no
+
+        # Uncomment the next line to generate "delayed mail" warnings
+        #delay_warning_time = 4h
+
+        readme_directory = no
+
+        #smtp_tls_CApath=/etc/ssl/certs
+        #smtp_tls_session_cache_database = btree:''${data_directory}/smtp_scache
+        smtp_tls_policy_maps = socketmap:inet:127.0.0.1:${toString cfg.mtaStsPort}:postfix
+        smtpd_tls_protocols = >=TLSv1.2
+
+        # Disable anonymous cipher suites
+        # and known insecure algorithms.
+        #
+        # Disabling anonymous ciphers
+        # does not generally improve security
+        # because clients that want to verify certificate
+        # will not select them anyway,
+        # but makes cipher suite list shorter and security scanners happy.
+        # See <https://www.postfix.org/TLS_README.html> for discussion.
+        #
+        # Only ancient insecure ciphers should be disabled here
+        # as MTA clients that do not support more secure cipher
+        # likely do not support MTA-STS either and will
+        # otherwise fall back to using plaintext connection.
+        smtpd_tls_exclude_ciphers = aNULL, RC4, MD5, DES
+
+        # Override client's preference order.
+        # <https://www.postfix.org/postconf.5.html#tls_preempt_cipherlist>
+        #
+        # This is mostly to ensure cipher suites with forward secrecy
+        # are preferred over non cipher suites without forward secrecy.
+        # See <https://www.postfix.org/FORWARD_SECRECY_README.html#server_fs>.
+        tls_preempt_cipherlist = yes
+
+        smtpd_relay_restrictions = permit_mynetworks permit_sasl_authenticated defer_unauth_destination
+        myhostname = ${chatmailDomain}
+        alias_maps = hash:/etc/aliases
+        alias_database = hash:/etc/aliases
+
+        # Postfix does not deliver mail for any domain by itself.
+        # Primary domain is listed in `virtual_mailbox_domains` instead
+        # and handed over to Dovecot.
+        mydestination =
+
+        relayhost =
+        mynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128
+        mailbox_size_limit = 0
+        # maximum 30MB sized messages
+        message_size_limit = 31457280
+        recipient_delimiter = +
+        inet_interfaces = all
+        inet_protocols = all
+
+        #virtual_transport = lmtp:unix:private/dovecot-lmtp
+        virtual_transport = lmtp:unix:/run/dovecot2/dovecot-lmtp
+        virtual_mailbox_domains = ${chatmailDomain}
+
+        mua_client_restrictions = permit_sasl_authenticated, reject
+        mua_sender_restrictions = reject_sender_login_mismatch, permit_sasl_authenticated, reject
+        mua_helo_restrictions = permit_mynetworks, reject_invalid_helo_hostname, reject_non_fqdn_helo_hostname, permit
+
+        # 1:1 map MAIL FROM to SASL login name.
+        smtpd_sender_login_maps = regexp:${postfixLoginMap}
+      '';
+
+      masterConfig = {
+        submission = {
+          args = [
+            "-o"
+            "syslog_name=postfix/submission"
+            "-o"
+            "smtpd_tls_security_level=encrypt"
+            "-o"
+            "smtpd_sasl_auth_enable=yes"
+            "-o"
+            "smtpd_sasl_type=dovecot"
+            "-o"
+            "smtpd_sasl_path=private/auth"
+            "-o"
+            "smtpd_reject_unlisted_recipient=no"
+            "-o"
+            "smtpd_client_restrictions=$mua_client_restrictions"
+            "-o"
+            "smtpd_helo_restrictions=$mua_helo_restrictions"
+            "-o"
+            "smtpd_sender_restrictions=$mua_sender_restrictions"
+            "-o"
+            "smtpd_recipient_restrictions="
+            "-o"
+            "smtpd_relay_restrictions=permit_sasl_authenticated,reject"
+            "-o"
+            "milter_macro_daemon_name=ORIGINATING"
+            "-o"
+            "smtpd_client_connection_limit=1000"
+            "-o"
+            "smtpd_proxy_filter=127.0.0.1:${toString cfg.filtermailSmtpPort}"
+            "-o"
+            "cleanup_service_name=authclean"
+          ];
+        };
+
+        smtps = {
+          args = [
+            "-o"
+            "syslog_name=postfix/smtps"
+            "-o"
+            "smtpd_tls_wrappermode=yes"
+            "-o"
+            "smtpd_tls_security_level=encrypt"
+            "-o"
+            "smtpd_sasl_auth_enable=yes"
+            "-o"
+            "smtpd_sasl_type=dovecot"
+            "-o"
+            "smtpd_sasl_path=private/auth"
+            "-o"
+            "smtpd_reject_unlisted_recipient=no"
+            "-o"
+            "smtpd_client_restrictions=$mua_client_restrictions"
+            "-o"
+            "smtpd_helo_restrictions=$mua_helo_restrictions"
+            "-o"
+            "smtpd_sender_restrictions=$mua_sender_restrictions"
+            "-o"
+            "smtpd_recipient_restrictions="
+            "-o"
+            "smtpd_relay_restrictions=permit_sasl_authenticated,reject"
+            "-o"
+            "milter_macro_daemon_name=ORIGINATING"
+            "-o"
+            "smtpd_client_connection_limit=1000"
+            "-o"
+            "smtpd_proxy_filter=127.0.0.1:${toString cfg.filtermailSmtpPort}"
+            "-o"
+            "cleanup_service_name=authclean"
+          ];
+        };
+      };
+      extraMasterConf = ''
+        # Local SMTP server for reinjecting filered mail.
+        localhost:${toString cfg.postfixReinjectPort} inet  n       -       n       -       10      smtpd
+          -o syslog_name=postfix/reinject
+          #-o smtpd_milters=unix:opendkim/opendkim.sock # TODO configure opendkim milter
+          -o cleanup_service_name=authclean
+
+        # Cleanup `Received` headers for authenticated mail
+        # to avoid leaking client IP.
+        #
+        # We do not do this for received mails
+        # as this will break DKIM signatures
+        # if `Received` header is signed.
+        authclean unix  n       -       -       -       0       cleanup
+          -o header_checks=regexp:${submissionHeaderCleanup}
+      '';
     };
 
     systemd.services = {
@@ -288,5 +469,16 @@ in
         };
       };
     };
+
+    users.users = {
+      "vmail" = lib.mkForce {
+        name = "vmail";
+        isSystemUser = true;
+        home = "/home/vmail";
+        createHome = true;
+        group = "vmail";
+      };
+    };
+
   };
 }
