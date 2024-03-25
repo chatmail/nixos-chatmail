@@ -19,7 +19,7 @@
 
   nixpkgs.overlays = [ (import ./overlay.nix) ];
 
-  environment.systemPackages = with pkgs; [ vim htop chatmaild postfix-mta-sts-resolver ];
+  environment.systemPackages = with pkgs; [ vim htop chatmaild ];
 
   security.acme.acceptTerms = true;
   security.acme.defaults.email = "root@c-nixos.testrun.org";
