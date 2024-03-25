@@ -1,6 +1,3 @@
 final: prev: {
-  chatmaild = prev.callPackage ./pkgs/chatmaild
-    {
-      pkgs = prev;
-    };
+  chatmaild = prev.callPackage ./pkgs/chatmaild prev;
 }

@@ -1,8 +1,6 @@
-{ pkgs, ... }:
+{ python3Packages, fetchFromGitHub, ... }:
 let
-  python3Packages = pkgs.python3Packages;
   buildPythonPackage = python3Packages.buildPythonPackage;
-  fetchFromGitHub = pkgs.fetchFromGitHub;
 in
 buildPythonPackage rec {
   name = "chatmaild";
