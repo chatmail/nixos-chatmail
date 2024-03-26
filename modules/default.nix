@@ -458,6 +458,8 @@ in
         '';
       };
 
+    services.unbound.enable = true;
+
     systemd.services = {
       filtermail = {
         description = "Chatmail Postfix BeforeQueue filter";
