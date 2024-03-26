@@ -21,5 +21,16 @@
 
     nixosModules.default = import ./modules/default.nix;
     overlays.default = import ./overlay.nix;
+
+    packages.x86_64-linux.default =
+      let
+        pkgs = nixpkgs.legacyPackages.x86_64-linux;
+        install-script = pkgs.writeShellScriptBin "install.sh" (builtins.readFile ./install.sh);
+      in pkgs.symlinkJoin {
+        name = "install.sh";
+        paths = [ install-script pkgs.nixos-rebuild ];
+        buildInputs = [ pkgs.makeWrapper ];
+        postBuild = "wrapProgram $out/bin/install.sh --prefix PATH : $out/bin";
+      };
   };
 }
