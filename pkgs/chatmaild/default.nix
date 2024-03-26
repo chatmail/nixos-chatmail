@@ -1,16 +1,17 @@
 { python3Packages, fetchFromGitHub, ... }:
 let
   buildPythonPackage = python3Packages.buildPythonPackage;
-in
-buildPythonPackage rec {
-  name = "chatmaild";
-  version = "0-unstable-2024-03-03";
   src = fetchFromGitHub {
     owner = "deltachat";
     repo = "chatmail";
     rev = "14342383cf6294241e49576b404a4606c11c8e34";
     sha256 = "sha256-ceC7J+qEyxsdUKrfb+/D6wz6g+Yw7tYH+KrLJdOZEVw=";
   };
+in
+buildPythonPackage {
+  name = "chatmaild";
+  inherit src;
+  version = "0-unstable-2024-03-03";
   sourceRoot = "${src.name}/chatmaild";
   format = "pyproject";
   propagatedBuildInputs = [
