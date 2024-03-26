@@ -1,6 +1,6 @@
 # Deploying
 
-Deployment uses [nixos-rebuild](https://nixos.wiki/wiki/Nixos-rebuild): `nix profile install nixpkgs#nixos-rebuild`.
+Deployment uses [nixos-rebuild](https://nixos.wiki/wiki/Nixos-rebuild).
 To deploy current configuration, type `nix run`.
 
 # Files
