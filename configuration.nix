@@ -23,7 +23,9 @@
 
   nixpkgs.overlays = [ (import ./overlay.nix) ];
 
-  environment.systemPackages = with pkgs; [ vim htop chatmaild ];
+  environment.systemPackages = builtins.attrValues {
+    inherit (pkgs) vim htop chatmaild;
+  };
 
   security.acme.acceptTerms = true;
   security.acme.defaults.email = "root@c-nixos.testrun.org";

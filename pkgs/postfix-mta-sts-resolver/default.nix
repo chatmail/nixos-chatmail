@@ -13,18 +13,19 @@ python3.pkgs.buildPythonApplication rec {
     sha256 = "sha256-QUHDI5FShwc/YNAuomvBP8bf563Zu+LiP7nEtXbtGP0=";
   };
 
-  propagatedBuildInputs = with python3Packages; [
-    setuptools
+  propagatedBuildInputs = builtins.attrValues {
+    inherit (python3Packages)
+      setuptools
 
-    pyyaml
-    aiohttp
-    aiodns
-    aiosqlite
-    asyncpg
-    redis
-  ];
+      pyyaml
+      aiohttp
+      aiodns
+      aiosqlite
+      asyncpg
+      redis;
+  };
 
-  meta = with lib; {
+  meta = {
     homepage = "https://github.com/Snawoot/postfix-mta-sts-resolver";
     description = "Daemon which provides TLS client policy for Postfix via socketmap, according to domain MTA-STS policy";
   };
