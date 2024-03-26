@@ -4,4 +4,7 @@ final: prev: {
   opendkim = prev.opendkim.overrideAttrs (old: {
     configureFlags = old.configureFlags ++ [ "--with-lua=${prev.lua}" ];
   });
+  dovecot = prev.dovecot.overrideAttrs (finalAttrs: previousAttrs: {
+    patches = previousAttrs.patches ++ [ ./dovecot-storage-remove-500-ms-debounce.patch ];
+  });
 }
