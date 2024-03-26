@@ -4,8 +4,8 @@ let
   src = fetchFromGitHub {
     owner = "deltachat";
     repo = "chatmail";
-    rev = "14342383cf6294241e49576b404a4606c11c8e34";
-    sha256 = "sha256-ceC7J+qEyxsdUKrfb+/D6wz6g+Yw7tYH+KrLJdOZEVw=";
+    rev = "9fdf4fd2afd93cfdb71785fa20e092bad67b8277";
+    sha256 = "sha256-hIM9xFsbdHDjZz5Y8ON+ZQzIczvozRR7D+iYhMrZLU4=";
   };
 in
 buildPythonPackage {
