@@ -26,7 +26,8 @@
       let
         pkgs = nixpkgs.legacyPackages.x86_64-linux;
         install-script = pkgs.writeShellScriptBin "install.sh" (builtins.readFile ./install.sh);
-      in pkgs.symlinkJoin {
+      in
+      pkgs.symlinkJoin {
         name = "install.sh";
         paths = [ install-script pkgs.nixos-rebuild ];
         buildInputs = [ pkgs.makeWrapper ];
