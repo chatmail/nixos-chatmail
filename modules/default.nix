@@ -498,6 +498,19 @@ in
         };
       };
 
+      echobot = {
+        description = "Chatmail echo bot";
+        wantedBy = [ "multi-user.target" ];
+        after = [ "network.target" ];
+        serviceConfig = {
+          ExecStart = "${pkgs.chatmaild}/bin/echobot ${cfg.configFile}";
+          Restart = "always";
+          RestartSec = 30;
+          User = "echobot";
+          WorkingDirectory = "~";
+        };
+      };
+
       mta-sts-daemon = {
         description = "Postfix MTA-STS resolver daemon";
         wantedBy = [ "multi-user.target" ];
@@ -533,5 +546,13 @@ in
       postfix.extraGroups = [ config.services.opendkim.group ];
     };
 
+    users.users.echobot = {
+      name = "echobot";
+      isSystemUser = true;
+      home = "/home/echobot";
+      createHome = true;
+      group = "echobot";
+    };
+    users.groups.echobot = { };
   };
 }

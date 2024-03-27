@@ -53,5 +53,9 @@
   services.chatmail = {
     enable = true;
     passwordMinLength = 10;
+
+    # Allow creation of 4-character usernames,
+    # otherwise echobot fails to claim echo@
+    usernameMinLength = 4;
   };
 }

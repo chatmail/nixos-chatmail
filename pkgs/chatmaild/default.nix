@@ -1,4 +1,4 @@
-{ python3Packages, fetchFromGitHub, ... }:
+{ deltachat-rpc-client, deltachat-rpc-server, python3Packages, fetchFromGitHub, ... }:
 let
   buildPythonPackage = python3Packages.buildPythonPackage;
   src = fetchFromGitHub {
@@ -19,6 +19,7 @@ buildPythonPackage {
     python3Packages.aiosmtpd
     python3Packages.iniconfig
     python3Packages.requests
-    # Also deltachat-rpc-client and deltachat-rpc-server for echobot
+    deltachat-rpc-server
+    deltachat-rpc-client
   ];
 }
