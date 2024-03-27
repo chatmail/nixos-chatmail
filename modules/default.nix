@@ -486,6 +486,18 @@ in
         };
       };
 
+      chatmail-metadata = {
+        description = "Chatmail dict proxy for IMAP METADATA";
+        wantedBy = [ "multi-user.target" ];
+        after = [ "network.target" ];
+        serviceConfig = {
+          ExecStart =
+            "${pkgs.chatmaild}/bin/chatmail-metadata /run/chatmail-metadata.socket vmail ${cfg.configFile} /home/vmail/metadata";
+          Restart = "always";
+          RestartSec = 30;
+        };
+      };
+
       mta-sts-daemon = {
         description = "Postfix MTA-STS resolver daemon";
         wantedBy = [ "multi-user.target" ];
