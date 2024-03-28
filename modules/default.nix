@@ -6,10 +6,43 @@ let
     mkIf
     mkOption;
 
+  commonSystemdSecurity = {
+    NoNewPrivileges = true;
+
+    CapabilityBoundingSet = "";
+
+    LockPersonality = true;
+    MemoryDenyWriteExecute = true;
+
+    RemoveIPC = true;
+
+    PrivateDevices = true;
+    PrivateMounts = true;
+    PrivateTmp = true;
+    PrivateUsers = true;
+
+    ProtectClock = true;
+    ProtectControlGroups = true;
+    ProtectHostname = true;
+    ProtectKernelLogs = true;
+    ProtectKernelModules = true;
+    ProtectKernelTunables = true;
+    ProtectProc = "noaccess";
+    ProtectSystem = "strict";
+
+    RestrictRealtime = true;
+    RestrictSUIDSGID = true;
+    RestrictNamespaces = true;
+
+    SystemCallArchitectures = "native";
+    SystemCallFilter = [ "~@clock" "~@cpu-emulation" "~@debug" "~@module" "~@mount" "~@obsolete" "~@privileged" "~@raw-io" "~@reboot" "~@resources" "~@swap" ];
+
+    UMask = 0077;
+  };
   chatmailDomain = config.networking.fqdn;
   cfg = config.services.chatmail;
   dovecotAuthConf = pkgs.writeText "auth.conf" ''
-    uri = proxy:/run/doveauth.socket:auth
+    uri = proxy:/run/doveauth/doveauth.socket:auth
     iterate_disable = yes
     default_pass_scheme = plain
     # %E escapes characters " (double quote), ' (single quote) and \ (backslash) with \ (backslash).
@@ -469,6 +502,8 @@ in
           ExecStart = "${pkgs.chatmaild}/bin/filtermail ${cfg.configFile}";
           Restart = "always";
           RestartSec = 30;
+
+          RestrictAddressFamilies = "AF_INET AF_INET6";
         };
       };
 
@@ -478,12 +513,15 @@ in
         after = [ "network.target" ];
         serviceConfig = {
           ExecStart =
-            "${pkgs.chatmaild}/bin/doveauth /run/doveauth.socket vmail /var/lib/chatmail/passdb.sqlite ${cfg.configFile}";
+            "${pkgs.chatmaild}/bin/doveauth /run/doveauth/doveauth.socket vmail /var/lib/chatmail/passdb.sqlite ${cfg.configFile}";
           Restart = "always";
           RestartSec = 30;
           StateDirectory = "chatmail";
           StateDirectoryMode = "0750";
-        };
+          RuntimeDirectory = "doveauth";
+
+          RestrictAddressFamilies = "AF_UNIX";
+        } // commonSystemdSecurity;
       };
 
       chatmail-metadata = {
@@ -492,9 +530,16 @@ in
         after = [ "network.target" ];
         serviceConfig = {
           ExecStart =
-            "${pkgs.chatmaild}/bin/chatmail-metadata /run/chatmail-metadata.socket vmail /home/vmail/mail/${chatmailDomain}";
+            "${pkgs.chatmaild}/bin/chatmail-metadata /run/chatmail-metadata/chatmail-metadata.socket vmail /home/vmail/mail/${chatmailDomain}";
           Restart = "always";
           RestartSec = 30;
+
+          User = "vmail";
+          RuntimeDirectory = "chatmail-metadata";
+
+          RestrictAddressFamilies = "AF_UNIX";
+        } // commonSystemdSecurity // {
+          SystemCallFilter = [ "~@clock" "~@cpu-emulation" "~@debug" "~@module" "~@mount" "~@obsolete" "~@raw-io" "~@reboot" "~@resources" "~@swap" ];
         };
       };
 
@@ -509,39 +554,8 @@ in
           User = "echobot";
           WorkingDirectory = "~";
 
-          NoNewPrivileges = true;
-
-          CapabilityBoundingSet = "";
-
-          LockPersonality = true;
-          MemoryDenyWriteExecute = true;
-
-          RemoveIPC = true;
-
-          PrivateDevices = true;
-          PrivateMounts = true;
-          PrivateTmp = true;
-          PrivateUsers = true;
-
-          ProtectClock = true;
-          ProtectControlGroups = true;
-          ProtectHostname = true;
-          ProtectKernelLogs = true;
-          ProtectKernelModules = true;
-          ProtectKernelTunables = true;
-          ProtectProc = "noaccess";
-          ProtectSystem = "strict";
-
-          RestrictRealtime = true;
-          RestrictSUIDSGID = true;
-          RestrictNamespaces = true;
           RestrictAddressFamilies = "AF_INET AF_INET6";
-
-          SystemCallArchitectures = "native";
-          SystemCallFilter = [ "~@clock" "~@cpu-emulation" "~@debug" "~@module" "~@mount" "~@obsolete" "~@privileged" "~@raw-io" "~@reboot" "~@resources" "~@swap" ];
-
-          UMask = 0077;
-        };
+        } // commonSystemdSecurity;
       };
 
       mta-sts-daemon = {
@@ -552,7 +566,7 @@ in
           ExecStart = "${pkgs.postfix-mta-sts-resolver}/bin/mta-sts-daemon";
           Restart = "always";
           RestartSec = 30;
-        };
+        } // commonSystemdSecurity;
       };
 
       opendkim = {
