@@ -508,6 +508,39 @@ in
           RestartSec = 30;
           User = "echobot";
           WorkingDirectory = "~";
+
+          NoNewPrivileges = true;
+
+          CapabilityBoundingSet = "";
+
+          LockPersonality = true;
+          MemoryDenyWriteExecute = true;
+
+          RemoveIPC = true;
+
+          PrivateDevices = true;
+          PrivateMounts = true;
+          PrivateTmp = true;
+          PrivateUsers = true;
+
+          ProtectClock = true;
+          ProtectControlGroups = true;
+          ProtectHostname = true;
+          ProtectKernelLogs = true;
+          ProtectKernelModules = true;
+          ProtectKernelTunables = true;
+          ProtectProc = "noaccess";
+          ProtectSystem = "strict";
+
+          RestrictRealtime = true;
+          RestrictSUIDSGID = true;
+          RestrictNamespaces = true;
+          RestrictAddressFamilies = "AF_INET AF_INET6";
+
+          SystemCallArchitectures = "native";
+          SystemCallFilter = [ "~@clock" "~@cpu-emulation" "~@debug" "~@module" "~@mount" "~@obsolete" "~@privileged" "~@raw-io" "~@reboot" "~@resources" "~@swap" ];
+
+          UMask = 0077;
         };
       };
 
