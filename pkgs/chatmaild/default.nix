@@ -4,8 +4,8 @@ let
   src = fetchFromGitHub {
     owner = "deltachat";
     repo = "chatmail";
-    rev = "9fdf4fd2afd93cfdb71785fa20e092bad67b8277";
-    sha256 = "sha256-hIM9xFsbdHDjZz5Y8ON+ZQzIczvozRR7D+iYhMrZLU4=";
+    rev = "1.1.0";
+    sha256 = "sha256-8mPEprtVGEWN6rUveEqasf4PuiWDas+/j3KQAUvjLGo=";
   };
 in
 buildPythonPackage {
@@ -19,6 +19,7 @@ buildPythonPackage {
     python3Packages.aiosmtpd
     python3Packages.iniconfig
     python3Packages.requests
+    python3Packages.filelock
     deltachat-rpc-server
     deltachat-rpc-client
   ];

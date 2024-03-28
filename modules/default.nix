@@ -492,7 +492,7 @@ in
         after = [ "network.target" ];
         serviceConfig = {
           ExecStart =
-            "${pkgs.chatmaild}/bin/chatmail-metadata /run/chatmail-metadata.socket vmail ${cfg.configFile} /home/vmail/metadata";
+            "${pkgs.chatmaild}/bin/chatmail-metadata /run/chatmail-metadata.socket vmail /home/vmail/mail/${chatmailDomain}";
           Restart = "always";
           RestartSec = 30;
         };
